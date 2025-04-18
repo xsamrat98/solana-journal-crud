@@ -1,4 +1,4 @@
-import CrudappFeature from '@/components/crudapp/crudapp-feature'
+import CrudappFeature from '@/components/crudapp/journal-feature'
 
 export default function Page() {
   return <CrudappFeature />
