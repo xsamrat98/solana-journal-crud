@@ -1,6 +1,7 @@
 #![allow(clippy::result_large_err)]
 
 use anchor_lang::prelude::*;
+use anchor_lang::require_keys_eq;
 
 declare_id!("CJPQTvvjAJJxS4LWPCbNZtsKJk7n96V5m8eDn1WrBoJr");
 
@@ -29,17 +30,35 @@ mod journal {
         title: String,
         message: String,
     ) -> Result<()> {
+        let journal_entry = &mut ctx.accounts.journal_entry;
+
+        // Ownership check
+        require_keys_eq!(
+            journal_entry.owner,
+            ctx.accounts.owner.key(),
+            JournalError::Unauthorized
+        );
+
         msg!("Journal Entry Updated");
         msg!("Title: {}", title);
         msg!("Message: {}", message);
 
-        let journal_entry = &mut ctx.accounts.journal_entry;
+        journal_entry.title = title;
         journal_entry.message = message;
 
         Ok(())
     }
 
-    pub fn delete_journal_entry(_ctx: Context<DeleteEntry>, title: String) -> Result<()> {
+    pub fn delete_journal_entry(ctx: Context<DeleteEntry>, title: String) -> Result<()> {
+        let journal_entry = &ctx.accounts.journal_entry;
+
+        // Ownership check
+        require_keys_eq!(
+            journal_entry.owner,
+            ctx.accounts.owner.key(),
+            JournalError::Unauthorized
+        );
+
         msg!("Journal entry titled {} deleted", title);
         Ok(())
     }
@@ -92,10 +111,16 @@ pub struct DeleteEntry<'info> {
         mut, 
         seeds = [title.as_bytes(), owner.key().as_ref()], 
         bump, 
-        close= owner,
+        close = owner,
     )]
     pub journal_entry: Account<'info, JournalEntryState>,
     #[account(mut)]
     pub owner: Signer<'info>,
     pub system_program: Program<'info, System>,
+}
+
+#[error_code]
+pub enum JournalError {
+    #[msg("You are not authorized to perform this action.")]
+    Unauthorized,
 }

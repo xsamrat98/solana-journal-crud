@@ -102,8 +102,12 @@ function JournalCard({ account }: { account: PublicKey }) {
   const { publicKey } = useWallet();
   const [message, setMessage] = useState("");
   const title = accountQuery.data?.title;
-
   const isFormValid = message.trim() !== "";
+  
+  console.log("isowner",accountQuery.data?.owner?.equals(publicKey as PublicKey));
+  
+  const isOwner = accountQuery.data?.owner?.equals(publicKey as PublicKey);
+
 
   const handleSubmit = () => {
     if (publicKey && isFormValid && title) {
@@ -125,51 +129,65 @@ function JournalCard({ account }: { account: PublicKey }) {
             className="card-title justify-center text-3xl cursor-pointer"
             onClick={() => accountQuery.refetch()}
           >
-            {accountQuery.data?.title}
+            {title}
           </h2>
           <p>{accountQuery.data?.message}</p>
-          <div className="card-actions justify-around">
-            <textarea
-              placeholder="Update message here"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="textarea textarea-bordered w-full max-w-xs"
-            />
-            <button
-              className="btn btn-xs lg:btn-md btn-primary"
-              onClick={handleSubmit}
-              disabled={updateEntry.isPending || !isFormValid}
-            >
-              Update Journal Entry {updateEntry.isPending && "..."}
-            </button>
-          </div>
-          <div className="text-center space-y-4">
-            <p>
-              <ExplorerLink
-                path={`account/${account}`}
-                label={ellipsify(account.toString())}
-              />
+
+          {/* ✅ Only show update/delete if user is the owner */}
+          {isOwner && (
+            <>
+              <div className="card-actions justify-around">
+                <textarea
+                  placeholder="Update message here"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="textarea textarea-bordered w-full max-w-xs"
+                />
+                <button
+                  className="btn btn-xs lg:btn-md btn-primary"
+                  onClick={handleSubmit}
+                  disabled={updateEntry.isPending || !isFormValid}
+                >
+                  Update Journal Entry {updateEntry.isPending && "..."}
+                </button>
+              </div>
+
+              <div className="text-center space-y-4">
+                <p>
+                  <ExplorerLink
+                    path={`account/${account}`}
+                    label={ellipsify(account.toString())}
+                  />
+                </p>
+                <button
+                  className="btn btn-xs btn-secondary btn-outline"
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        "Are you sure you want to close this account?"
+                      )
+                    ) {
+                      return;
+                    }
+                    const title = accountQuery.data?.title;
+                    if (title) {
+                      return deleteEntry.mutateAsync(title);
+                    }
+                  }}
+                  disabled={deleteEntry.isPending}
+                >
+                  Close
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ❌ Show read-only view if user is not the owner */}
+          {!isOwner && (
+            <p className="italic text-sm text-gray-400">
+              You do not own this journal entry.
             </p>
-            <button
-              className="btn btn-xs btn-secondary btn-outline"
-              onClick={() => {
-                if (
-                  !window.confirm(
-                    "Are you sure you want to close this account?"
-                  )
-                ) {
-                  return;
-                }
-                const title = accountQuery.data?.title;
-                if (title) {
-                  return deleteEntry.mutateAsync(title);
-                }
-              }}
-              disabled={deleteEntry.isPending}
-            >
-              Close
-            </button>
-          </div>
+          )}
         </div>
       </div>
     </div>

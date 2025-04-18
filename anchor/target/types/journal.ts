@@ -175,6 +175,13 @@ export type Journal = {
       ]
     }
   ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "unauthorized",
+      "msg": "You are not authorized to perform this action."
+    }
+  ],
   "types": [
     {
       "name": "journalEntryState",
