@@ -6,7 +6,7 @@ import {
   JournalIDL,
 } from "../../../anchor/src/crudapp-exports";
 import { Program } from "@coral-xyz/anchor";
-import { useConnection } from "@solana/wallet-adapter-react";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { Cluster, PublicKey } from "@solana/web3.js";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -27,6 +27,8 @@ export function useJournalProgram() {
   const { cluster } = useCluster();
   const transactionToast = useTransactionToast();
   const provider = useAnchorProvider();
+  const { publicKey } = useWallet();
+
   const programId = useMemo(
     () => getJournalProgramId(cluster.network as Cluster),
     [cluster]
@@ -34,8 +36,20 @@ export function useJournalProgram() {
   const program = getJournalProgram(provider);
 
   const accounts = useQuery({
-    queryKey: ["journal", "all", { cluster }],
-    queryFn: () => program.account.journalEntryState.all(),
+    queryKey: ["journal", "userEntries", { cluster, publicKey }],
+    queryFn: async () => {
+      if (!publicKey) return [];
+  
+      return program.account.journalEntryState.all([
+        {
+          memcmp: {
+            offset: 8, // Discriminator is 8 bytes, so owner starts at byte 8
+            bytes: publicKey.toBase58(),
+          },
+        },
+      ]);
+    },
+    enabled: !!publicKey, // only run query if user is connected
   });
 
   const getProgramAccount = useQuery({
